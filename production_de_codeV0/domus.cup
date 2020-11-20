@@ -71,8 +71,6 @@ void exemple_de_fonction(String i1, String i2)
 	if (!(i1.equals(i2))) parser.report_error(m,null);	 
 }
 
-
-
 :}
 
 terminal PROGRAMME_DOMUS, DECLARATION_APPAREILS, DECLARATION_INTERFACES, DECLARATION_SCENARII, DECLARATION_COMMANDES, SCENARIO;
@@ -89,12 +87,12 @@ terminal PAROUV, PARFER, ACOOUV, ACOFER;
 terminal POINT, PT_VIRG, DEUX_PT, VIRGULE, UNDERSCORE;
 
 
-non terminal prog, 
+non terminal prog;
 non terminal ArrayList<String> liste_ident;
 
 non terminal zone_decla_appareils, liste_action_appareil, action_appareil; 
 
-non terminal zone_decla_interfaces, liste_action_interface, action_interface;
+non terminal ArrayList<String> zone_decla_interfaces, liste_action_interface, action_interface;
 
 non terminal zone_decla_scenariis, liste_declaration_scenarii, declaration_scenarii, liste_action_scenarii, action_scenarii, boucle_pourtout, conditionnelle, condition, parametre_message, contenu_message;
 
@@ -115,8 +113,8 @@ INF SLASH PROGRAMME_DOMUS SUP
 ;
 
 liste_ident ::=
-IDENT VIRGULE liste_ident
-| IDENT //{: ArrayList<String> l = new ArrayList<>(); l :}
+liste_ident:l VIRGULE IDENT:n {: l.add(n); RESULT = l; :}
+| IDENT:n {: ArrayList<String> l = new ArrayList<>(); l.add(n); RESULT = l; :}
 ;
 
 //---------- APPAREILS ----------
@@ -143,17 +141,31 @@ TYPE_APPAREIL liste_ident POINT
 
 zone_decla_interfaces::=
 INF DECLARATION_INTERFACES SUP
-liste_action_interface
+liste_action_interface:l
 INF SLASH DECLARATION_INTERFACES SUP
+	{: RESULT = l;
+	:}
 ;
 
 liste_action_interface ::=
-action_interface liste_action_interface
-|
+liste_action_interface:l action_interface:a 
+	{:
+	l.addAll(a);
+	RESULT = l;
+	:}
+| action_interface:a {:  RESULT = a; :}
 ;
 
 action_interface ::=
-TYPE_INTERFACE liste_ident POINT
+TYPE_INTERFACE:type liste_ident:l POINT 
+	{: 
+		ArrayList<String> res = new ArrayList<>(); 
+		for(String ident:l){ 
+			res.add("CInterface "+ident+"= new CInterface("+ident+", "+type.toUpperCase()+");\n"); 
+			res.add("ma_liste_interfaces.add("+ident+");\n");
+		} 
+		RESULT = res;
+	:}
 | error
 ;
 
