@@ -1,0 +1,309 @@
+// Specification JCup
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+parser code {:
+	public static void main(String args[]) throws Exception {
+	new parser(new Yylex(new InputStreamReader(System.in))).parse();
+	}
+
+	public void syntax_error(Symbol cur_token) { 
+		// n'interrompt pas la compil... 
+		// on est par defaut dans l'etat error qui permet ensuite la recup
+		// par d�faut : report_error("syntax error", null);
+		report_error("Syntaxe incorrecte <"+tokenToString(cur_token)+">", null);        
+	}
+
+	public void report_error(String message, Object info) {   
+		// n'interrompt pas la compil
+		if (info == null) System.err.println("Mon erreur <"+ ptext()+ "> ligne "+ pline() + ", colonne " + pcolumn() + " : " + message);
+		else System.err.println("Mon erreur <"+ptext()+ "> ligne "+ pline() + ", colonne " + pcolumn() + " : " +message+" : "+info);
+		System.err.println("-> mais on continue l'analyse... ");
+	}
+
+	public void unrecovered_syntax_error(Symbol cur_token) {
+    	// par defaut : report_fatal_error("Couldn't repair and continue parse", null);
+		// on n'a pas reussi a faire de la recup
+		report_fatal_error("Recuperation impossible <"+tokenToString(cur_token)+">", null);   // interrompt la compil     
+	}
+
+	public void report_fatal_error(String message, Object info) {  
+		// qd cette fct est appelee, message vaut par defaut "Couldn't repair and continue parse"
+		String m = "Mon erreur fatale <"+ ptext()+ "> ligne " + pline() + ", colonne " + pcolumn() + " : " + message;
+		if (info == null) System.err.println(m);
+		else System.err.println(m+" : "+info);
+		System.err.println("-> arr�t de l'analyse...");
+		done_parsing(); // interrompt la compil
+  	}
+
+	public int pline(){
+		return ((Yylex)getScanner()).getYyLine();
+	}
+	public int pcolumn(){
+		return ((Yylex)getScanner()).getYyColumn();
+	}
+	public String ptext(){
+		return ((Yylex)getScanner()).getYyText();
+	}
+
+
+public String tokenToString (Symbol token) {
+// qqs exemples pour voir...
+     switch (token.sym) {
+	case sym.SI : return "SI"; 
+	case sym.CHAINE : return "CHAINE "+token.value;  
+	case sym.ENTIER : return "ENTIER "+token.value;  
+	//  ... A compl�ter !!
+	default : return "Token impr�vu ou error";
+	}
+}
+
+:}
+
+
+
+action code {:
+
+void exemple_de_fonction(String i1, String i2)
+{
+	String m = "Erreur syntaxique <"+i2+"> au lieu de <"+i1+">";
+	if (!(i1.equals(i2))) parser.report_error(m,null);	 
+}
+
+
+
+:}
+
+terminal PROGRAMME_DOMUS, DECLARATION_APPAREILS, DECLARATION_INTERFACES, DECLARATION_SCENARII, DECLARATION_COMMANDES, SCENARIO;
+terminal POURTOUT, FAIRE, FAIT;
+terminal DEFINIR, MESSAGE, PROGRAMMER, ASSOCIER, EXECUTER_SCENARIO;
+terminal SI, ALORS, SINON, FSI;
+terminal METHODE;
+terminal String TYPE_APPAREIL, TYPE_AUTRE_APPAREIL, AUTRE_APPAREIL, TYPE_INTERFACE, ENUM_ETAT;
+terminal String IDENT, CHAINE;
+terminal Integer ENTIER;
+terminal EGAL;
+terminal INF, SUP, SLASH;
+terminal PAROUV, PARFER, ACOOUV, ACOFER;
+terminal POINT, PT_VIRG, DEUX_PT, VIRGULE, UNDERSCORE;
+
+
+non terminal prog, liste_ident;
+
+non terminal zone_decla_appareils, liste_action_appareil, action_appareil; 
+
+non terminal zone_decla_interfaces, liste_action_interface, action_interface;
+
+non terminal zone_decla_scenariis, liste_declaration_scenarii, declaration_scenarii, liste_action_scenarii, action_scenarii, boucle_pourtout, conditionnelle, condition, parametre_message, contenu_message;
+
+non terminal zone_decla_commandes, liste_action_commande, action_commande, liste_date, date;
+
+non terminal etat;
+
+
+//---------- GENERAL ----------
+
+prog ::=
+INF PROGRAMME_DOMUS SUP
+zone_decla_appareils
+zone_decla_interfaces
+zone_decla_scenariis
+zone_decla_commandes
+INF SLASH PROGRAMME_DOMUS SUP
+;
+
+liste_ident ::=
+IDENT VIRGULE liste_ident
+| IDENT
+;
+
+//---------- APPAREILS ----------
+
+zone_decla_appareils ::=
+INF DECLARATION_APPAREILS SUP
+liste_action_appareil
+INF SLASH DECLARATION_APPAREILS SUP
+;
+
+liste_action_appareil ::=
+action_appareil liste_action_appareil
+| action_appareil
+;
+
+action_appareil ::=
+TYPE_APPAREIL liste_ident POINT
+| AUTRE_APPAREIL PAROUV TYPE_AUTRE_APPAREIL PARFER liste_ident POINT // ident autre appatreil = type
+| DEFINIR IDENT EGAL ACOOUV liste_ident ACOFER POINT 
+;
+
+//---------- INTERFACES ----------
+
+zone_decla_interfaces::=
+INF DECLARATION_INTERFACES SUP
+liste_action_interface
+INF SLASH DECLARATION_INTERFACES SUP
+;
+
+liste_action_interface ::=
+action_interface liste_action_interface
+|
+;
+
+action_interface ::=
+TYPE_INTERFACE liste_ident POINT
+;
+
+//---------- SCENARIIS ----------
+
+zone_decla_scenariis ::=
+INF DECLARATION_SCENARII SUP
+liste_declaration_scenarii
+INF SLASH DECLARATION_SCENARII SUP
+;
+
+liste_declaration_scenarii ::=
+ liste_declaration_scenarii declaration_scenarii
+| declaration_scenarii
+;
+
+declaration_scenarii ::=
+INF SCENARIO IDENT SUP
+liste_action_scenarii
+INF SLASH SCENARIO IDENT SUP
+;
+
+liste_action_scenarii ::=
+action_scenarii liste_action_scenarii
+| action_scenarii
+;
+
+action_scenarii ::=
+boucle_pourtout
+| conditionnelle
+| EXECUTER_SCENARIO IDENT PT_VIRG
+| MESSAGE PAROUV parametre_message PARFER PT_VIRG
+| IDENT POINT METHODE PT_VIRG
+;
+
+boucle_pourtout ::=
+POURTOUT IDENT DEUX_PT TYPE_APPAREIL FAIRE liste_action_scenarii FAIT PT_VIRG
+| POURTOUT IDENT DEUX_PT AUTRE_APPAREIL FAIRE liste_action_scenarii FAIT PT_VIRG
+| POURTOUT IDENT DEUX_PT AUTRE_APPAREIL PAROUV TYPE_AUTRE_APPAREIL PARFER FAIRE liste_action_scenarii FAIT PT_VIRG
+| POURTOUT IDENT DEUX_PT IDENT FAIRE liste_action_scenarii FAIT PT_VIRG
+;
+
+conditionnelle ::=
+SI condition ALORS liste_action_scenarii FSI PT_VIRG
+| SI condition ALORS liste_action_scenarii SINON liste_action_scenarii FSI PT_VIRG
+;
+condition ::=
+PAROUV etat EGAL EGAL etat PARFER 
+;
+
+etat ::=
+ENUM_ETAT
+| IDENT POINT METHODE
+;
+
+parametre_message ::=
+parametre_message VIRGULE contenu_message
+| contenu_message
+;
+
+contenu_message ::=
+CHAINE
+| IDENT
+| etat
+;
+
+//---------- COMMANDES ----------
+
+zone_decla_commandes ::=
+INF DECLARATION_COMMANDES SUP
+liste_action_commande
+INF SLASH DECLARATION_COMMANDES SUP
+;
+
+liste_action_commande ::=
+action_commande liste_action_commande
+| action_commande
+;
+
+action_commande ::=
+ASSOCIER IDENT EGAL IDENT POINT
+| ASSOCIER IDENT EGAL ACOOUV liste_ident ACOFER POINT
+| PROGRAMMER IDENT EGAL date POINT
+| PROGRAMMER IDENT EGAL ACOOUV liste_date ACOFER POINT
+;
+
+liste_date ::=
+liste_date VIRGULE date
+| date
+;
+
+date ::=
+PAROUV ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER PARFER
+| PAROUV UNDERSCORE VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER PARFER
+| PAROUV ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER PARFER
+| PAROUV ENTIER VIRGULE ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER VIRGULE ENTIER PARFER
+| PAROUV ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER PARFER
+;
+
+//---------- TEST ----------
+/*
+liste_token ::=
+token liste_token
+| token
+;
+
+
+
+token ::= 
+PROGRAMME_DOMUS:n {: System.out.println("reconnu : "+n); :}
+| DECLARATION_APPAREILS:n {: System.out.println("reconnu : "+n); :}
+| DECLARATION_INTERFACES:n {: System.out.println("reconnu : "+n); :}
+| DECLARATION_SCENARII:n {: System.out.println("reconnu : "+n); :}
+| DECLARATION_COMMANDES:n {: System.out.println("reconnu : "+n); :}
+| SCENARIO:n {: System.out.println("reconnu : "+n); :}
+| POURTOUT:n {: System.out.println("reconnu : "+n); :}
+| FAIRE:n {: System.out.println("reconnu : "+n); :}
+| FAIT:n {: System.out.println("reconnu : "+n); :}
+| DEFINIR:n {: System.out.println("reconnu : "+n); :}
+| MESSAGE:n {: System.out.println("reconnu : "+n); :}
+| PROGRAMMER:n {: System.out.println("reconnu : "+n); :}
+| ASSOCIER:n {: System.out.println("reconnu : "+n); :}
+| EXECUTER_SCENARIO:n {: System.out.println("reconnu : "+n); :}
+| SI:n {: System.out.println("reconnu : "+n); :}
+| ALORS :n {: System.out.println("reconnu : "+n); :}
+| SINON:n {: System.out.println("reconnu : "+n); :}
+| FSI:n {: System.out.println("reconnu : "+n); :}
+| METHODE {: System.out.println("reconnu : "+n); :}
+| TYPE_APPAREIL:n {: System.out.println("reconnu : "+n); :}
+| TYPE_INTERFACE:n {: System.out.println("reconnu : "+n); :}
+| IDENT:n {: System.out.println("reconnu : "+n); :}
+| CHAINE:n {: System.out.println("reconnu : "+n); :}
+| ENTIER:n {: System.out.println("reconnu : "+n); :}
+| EGAL:n {: System.out.println("reconnu : "+n); :}
+| INF:n {: System.out.println("reconnu : "+n); :}
+| SUP:n {: System.out.println("reconnu : "+n); :}
+| SLASH:n {: System.out.println("reconnu : "+n); :}
+| PAROUV:n {: System.out.println("reconnu : "+n); :}
+| PARFER:n {: System.out.println("reconnu : "+n); :}
+| CROOUV:n {: System.out.println("reconnu : "+n); :}
+| CROFER:n {: System.out.println("reconnu : "+n); :}
+| ACOOUV:n {: System.out.println("reconnu : "+n); :}
+| ACOFER:n {: System.out.println("reconnu : "+n); :}
+| POINT:n {: System.out.println("reconnu : "+n); :}
+| PT_VIRG:n {: System.out.println("reconnu : "+n); :}
+| DEUX_PT:n {: System.out.println("reconnu : "+n); :}
+| VIRGULE:n {: System.out.println("reconnu : "+n); :}
+| UNDERSCORE:n {: System.out.println("reconnu : "+n); :}
+;
+ */
+/*prog	::= lcomment PROG ....   FINPROG {: System.out.println("FINPROG "+parser.pline()+","+parser.pcolumn()); :} ;
+
+
+dec	::= VAR PT {: System.out.println("d�cla ok"+ " ligne "+ parser.pline()); :}
+	| error {: System.out.println("R�cup�ration erreur syntaxique au niveau de la d�claration - d�claration non trait�e"); :};
+*/
