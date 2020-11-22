@@ -71,13 +71,18 @@ void exemple_de_fonction(String i1, String i2)
 	if (!(i1.equals(i2))) parser.report_error(m,null);	 
 }
 
+void erreur_identifiant_mot_clef(String s){
+	String m = "Erreur syntaxique utilisation de <"+s+"> interdite pour un identifaint";
+	System.out.println(m);	
+}
+
 :}
 
-terminal PROGRAMME_DOMUS, DECLARATION_APPAREILS, DECLARATION_INTERFACES, DECLARATION_SCENARII, DECLARATION_COMMANDES, SCENARIO;
-terminal POURTOUT, FAIRE, FAIT;
-terminal DEFINIR, MESSAGE, PROGRAMMER, ASSOCIER, EXECUTER_SCENARIO;
-terminal SI, ALORS, SINON, FSI;
-terminal METHODE;
+terminal String PROGRAMME_DOMUS, DECLARATION_APPAREILS, DECLARATION_INTERFACES, DECLARATION_SCENARII, DECLARATION_COMMANDES, SCENARIO;
+terminal String POURTOUT, FAIRE, FAIT;
+terminal String DEFINIR, MESSAGE, PROGRAMMER, ASSOCIER, EXECUTER_SCENARIO;
+terminal String SI, ALORS, SINON, FSI;
+terminal String METHODE;
 terminal String TYPE_APPAREIL, TYPE_AUTRE_APPAREIL, AUTRE_APPAREIL, TYPE_INTERFACE, ENUM_ETAT;
 terminal String IDENT, CHAINE;
 terminal Integer ENTIER;
@@ -89,6 +94,7 @@ terminal POINT, PT_VIRG, DEUX_PT, VIRGULE, UNDERSCORE;
 
 non terminal prog;
 non terminal ArrayList<String> liste_ident;
+non terminal String entree_identifiant;
 
 non terminal zone_decla_appareils, liste_action_appareil, action_appareil; 
 
@@ -100,6 +106,8 @@ non terminal zone_decla_commandes, liste_action_commande, action_commande, liste
 
 non terminal etat;
 
+non terminal erreur_identifiant;
+non terminal String utilisation_mot_clef;
 
 //---------- GENERAL ----------
 
@@ -113,8 +121,13 @@ INF SLASH PROGRAMME_DOMUS SUP
 ;
 
 liste_ident ::=
-liste_ident:l VIRGULE IDENT:n {: l.add(n); RESULT = l; :}
-| IDENT:n {: ArrayList<String> l = new ArrayList<>(); l.add(n); RESULT = l; :}
+liste_ident:l VIRGULE entree_identifiant:n {: l.add(n); RESULT = l; :}
+| entree_identifiant:n {: ArrayList<String> l = new ArrayList<>(); l.add(n); RESULT = l; :}
+;
+
+entree_identifiant ::=
+IDENT:n {: RESULT = n; :}
+| erreur_identifiant {: RESULT = null; :}
 ;
 
 //---------- APPAREILS ----------
@@ -133,7 +146,7 @@ action_appareil liste_action_appareil
 action_appareil ::=
 TYPE_APPAREIL liste_ident POINT
 | AUTRE_APPAREIL PAROUV TYPE_AUTRE_APPAREIL PARFER liste_ident POINT // ident autre appatreil = type
-| DEFINIR IDENT EGAL ACOOUV liste_ident ACOFER POINT 
+| DEFINIR entree_identifiant EGAL ACOOUV liste_ident ACOFER POINT 
 | error
 ;
 
@@ -143,15 +156,18 @@ zone_decla_interfaces::=
 INF DECLARATION_INTERFACES SUP
 liste_action_interface:l
 INF SLASH DECLARATION_INTERFACES SUP
-	{: RESULT = l;
+	{: 
+		RESULT = l;
 	:}
 ;
 
 liste_action_interface ::=
 liste_action_interface:l action_interface:a 
 	{:
-	l.addAll(a);
-	RESULT = l;
+		ArrayList<String> res = new ArrayList<>();
+		if(l!=null) res.addAll(l);
+		if(a!=null) res.addAll(a);
+		RESULT = l;
 	:}
 | action_interface:a {:  RESULT = a; :}
 ;
@@ -160,11 +176,14 @@ action_interface ::=
 TYPE_INTERFACE:type liste_ident:l POINT 
 	{: 
 		ArrayList<String> res = new ArrayList<>(); 
-		for(String ident:l){ 
-			res.add("CInterface "+ident+"= new CInterface("+ident+", "+type.toUpperCase()+");\n"); 
-			res.add("ma_liste_interfaces.add("+ident+");\n");
-		} 
+		if(l!=null){
+			for(String ident:l){ 
+				res.add("CInterface "+ident+"= new CInterface("+ident+", "+type.toUpperCase()+");\n"); 
+				res.add("ma_liste_interfaces.add("+ident+");\n");
+			} 
+		}
 		RESULT = res;
+
 	:}
 | error
 ;
@@ -183,9 +202,9 @@ liste_declaration_scenarii ::=
 ;
 
 declaration_scenarii ::=
-INF SCENARIO IDENT SUP
+INF SCENARIO entree_identifiant SUP
 liste_action_scenarii
-INF SLASH SCENARIO IDENT SUP
+INF SLASH SCENARIO entree_identifiant SUP
 | error
 ;
 
@@ -197,7 +216,7 @@ action_scenarii liste_action_scenarii
 action_scenarii ::=
 boucle_pourtout
 | conditionnelle
-| EXECUTER_SCENARIO IDENT PT_VIRG
+| EXECUTER_SCENARIO entree_identifiant PT_VIRG
 | MESSAGE PAROUV parametre_message PARFER PT_VIRG
 | IDENT POINT METHODE PT_VIRG
 | error
@@ -249,7 +268,7 @@ action_commande liste_action_commande
 
 action_commande ::=
 ASSOCIER IDENT EGAL IDENT POINT
-| ASSOCIER IDENT EGAL ACOOUV liste_ident ACOFER POINT
+| ASSOCIER IDENT EGAL ACOOUV IDENT ACOFER POINT
 | PROGRAMMER IDENT EGAL date POINT
 | PROGRAMMER IDENT EGAL ACOOUV liste_date ACOFER POINT
 | error
@@ -266,6 +285,43 @@ PAROUV ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER PARFER
 | PAROUV ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER VIRGULE ENTIER VIRGULE ENTIER PARFER
 | PAROUV ENTIER VIRGULE ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER VIRGULE ENTIER PARFER
 | PAROUV ENTIER VIRGULE ENTIER VIRGULE ENTIER VIRGULE UNDERSCORE VIRGULE ENTIER PARFER
+;
+
+//---------- ERREURS ----------
+
+erreur_identifiant ::=
+utilisation_mot_clef:s
+	{: 
+		String m = "Erreur syntaxique ligne:"+parser.pline()+" colonne:"+parser.pcolumn()+" utilisation de <"+s+"> interdite pour un identifaint";
+		System.out.println(m);
+	:}
+;
+
+utilisation_mot_clef ::=
+PROGRAMME_DOMUS:s {:RESULT=s;:}
+| DECLARATION_APPAREILS:s {:RESULT=s;:}
+| DECLARATION_INTERFACES:s {:RESULT=s;:}
+| DECLARATION_SCENARII:s {:RESULT=s;:}
+| DECLARATION_COMMANDES:s {:RESULT=s;:}
+| SCENARIO:s {:RESULT=s;:}
+| POURTOUT:s {:RESULT=s;:}
+| FAIRE:s {:RESULT=s;:}
+| FAIT:s {:RESULT=s;:}
+| DEFINIR:s {:RESULT=s;:}
+| MESSAGE:s {:RESULT=s;:}
+| PROGRAMMER:s {:RESULT=s;:}
+| ASSOCIER:s {:RESULT=s;:}
+| EXECUTER_SCENARIO:s {:RESULT=s;:}
+| SI:s {:RESULT=s;:}
+| ALORS:s {:RESULT=s;:}
+| SINON:s {:RESULT=s;:}
+| FSI:s {:RESULT=s;:}
+| METHODE:s {:RESULT=s;:}
+|TYPE_APPAREIL:s {:RESULT=s;:}
+| TYPE_AUTRE_APPAREIL:s {:RESULT=s;:}
+| AUTRE_APPAREIL:s {:RESULT=s;:}
+| TYPE_INTERFACE:s {:RESULT=s;:}
+| ENUM_ETAT:s {:RESULT=s;:}
 ;
 
 //---------- TEST ----------
@@ -299,7 +355,7 @@ PROGRAMME_DOMUS:n {: System.out.println("reconnu : "+n); :}
 | METHODE {: System.out.println("reconnu : "+n); :}
 | TYPE_APPAREIL:n {: System.out.println("reconnu : "+n); :}
 | TYPE_INTERFACE:n {: System.out.println("reconnu : "+n); :}
-| IDENT:n {: System.out.println("reconnu : "+n); :}
+| entree_identifiant:n {: System.out.println("reconnu : "+n); :}
 | CHAINE:n {: System.out.println("reconnu : "+n); :}
 | ENTIER:n {: System.out.println("reconnu : "+n); :}
 | EGAL:n {: System.out.println("reconnu : "+n); :}
