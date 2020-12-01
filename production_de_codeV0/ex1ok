@@ -1,7 +1,7 @@
 <PROGRAMME_DOMUS>
 // Programme de test 1 sans erreur
 
-// dÃ©claration des appareils
+// déclaration des appareils
 <DECLARATION_APPAREILS>
 	eclairage e1, e2, e3.
 	volet v1, v2, v3, v4.
@@ -17,7 +17,7 @@
 	autre_appareil(lave_linge) ll.
 	autre_appareil(portail) port.
 
-	// dÃ©claration d'un ensemble d'appareils (type Ã©numÃ©rÃ© utilisateur)
+	// déclaration d'un ensemble d'appareils (type énuméré utilisateur)
 	definir mon_eclairage_salon = {e2,e3}.
 	definir elec_salon = {matv,proj,tv1}.
 </DECLARATION_APPAREILS>
@@ -32,10 +32,10 @@
 	interrupteur b2.
 </DECLARATION_INTERFACES>
 
-// dÃ©claration des scenarii
+// déclaration des scenarii
 <DECLARATION_SCENARII>
 
-	// dÃ©claration du scenario bonjour
+	// déclaration du scenario bonjour
 	<SCENARIO bonjour>
 		pourtout v:volet faire v.ouvrir; fait;
 		a1.eteindre;
@@ -58,11 +58,11 @@
 		pourtout v:volet faire v.fermer; fait;
 		pourtout e:eclairage faire e.eteindre; fait;
 		si (fen.etat == ferme) alors a1.allumer; 
-		sinon message("Attention : la fenÃªtre ",fen," est ouverte !"); fsi;
+		sinon message("Attention : la fenêtre ",fen," est ouverte !"); fsi;
 		pourtout e:autre_appareil faire e.eteindre; fait;
 	</SCENARIO depart>
 
-	// dÃ©claration du scenario de test
+	// déclaration du scenario de test
 	<SCENARIO test>
 		pourtout e:elec_salon faire message("Etat de ",e," = ",e.etat); fait;
 		pourtout e:autre_appareil(tv) faire e.allumer; fait;
@@ -79,7 +79,7 @@
 		sinon si (r1.etat == allume) alors r1.eteindre;  // fin chauffage
 			sinon message(" bip !"); fsi;  fsi;
 
-		si (fen.etat == ouvert) alors message("fenÃªtre ouverte !"); fsi;
+		si (fen.etat == ouvert) alors message("fenêtre ouverte !"); fsi;
 
 		si (cafe.etat == allume) alors cafe.eteindre; fsi ;
 		si (cafe.etat == eteint) alors cafe.allumer; fsi;
@@ -98,14 +98,14 @@
 // fin scenarii
 </DECLARATION_SCENARII>
 
-// dÃ©claration des commandes
+// déclaration des commandes
 <DECLARATION_COMMANDES>
 	associer b1 = bonjour.
 	associer tel1 = test.
 	associer tab1 = test.
 	associer zap = test.
 
-	// le scenario soirÃ©e est lancÃ© tous les soirs du premier jour de chaque mois 2012 Ã  18h.
+	// le scenario soirée est lancé tous les soirs du premier jour de chaque mois 2012 à 18h.
 	programmer test2 = (_,1,1,6,0).
 	programmer soiree = (2012,_,1,18,0).    
 	programmer soiree_musique = {(2012,11,20,19,30),(2012,11,21,19,30)}.
